@@ -266,3 +266,8 @@
         background-position: -300% 50%;
     }
 }
+
+/* temporarily hide the nebula custom background */
+#Nebula-urlbar-background {
+    display: none !important;
+}

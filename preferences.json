@@ -238,12 +238,7 @@
     "label": "Enable pinned extensions mod (see GitHub for setup)",
     "margin": "12px 0"
   },
-{
-    "type": "checkbox",
-    "property": "zen.nebula.bonjourr-on-startup",
-    "label": "Enable Bonjourr on Startup / Empty State",
-    "margin": "12px 0"
-  },
+
 {
   "type": "separator",
   "label": "",

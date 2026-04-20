@@ -1256,6 +1256,71 @@
     }
   }
 
+// ========== NebulaZenBonjourrModule ==========
+  class NebulaZenBonjourrModule {
+    constructor() {
+      this.extension_id = "{4f391a9e-8717-4ba6-a5b1-488a34931fcb}";
+      this.pref_key = "zen.nebula.bonjourr-on-startup";
+      this.cached_url = null;
+    }
+
+    init() {
+      // initialize preference
+      try {
+        let branch = Services.prefs.getDefaultBranch("zen.nebula.");
+        if (branch.getPrefType("bonjourr-on-startup") === 0) {
+          branch.setBoolPref("bonjourr-on-startup", true);
+        }
+      } catch (e) {}
+
+      // startup check
+      setTimeout(() => {
+        if (!window.gBrowser) return;
+        let url = gBrowser.selectedBrowser.currentURI.spec;
+        if (url === "about:blank" || url === "about:home" || url === "about:newtab") {
+          this.execute_navigation();
+        }
+      }, 500);
+
+      // tab closure check
+      gBrowser.tabContainer.addEventListener("TabClose", () => {
+        if (!Services.prefs.getBoolPref(this.pref_key, true)) return;
+        setTimeout(() => {
+          if (gBrowser.tabs.length === 1) {
+            let url = gBrowser.selectedBrowser.currentURI.spec;
+            if (url === "about:blank" || url === "about:home") {
+              this.execute_navigation();
+            }
+          }
+        }, 200);
+      });
+
+      Nebula.logger.log("✅ [ZenBonjourr] Module initialized.");
+    }
+
+    get_url() {
+      if (this.cached_url) return this.cached_url;
+      try {
+        let policy = WebExtensionPolicy.getByID(this.extension_id);
+        if (policy) return this.cached_url = policy.getURL("index.html");
+      } catch (e) {}
+      return null;
+    }
+
+    execute_navigation() {
+      if (!Services.prefs.getBoolPref(this.pref_key, true)) return;
+      const target = this.get_url();
+      if (!target) return;
+
+      try {
+        let uri = Services.io.newURI(target);
+        gBrowser.selectedBrowser.loadURI(uri, {
+          triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal()
+        });
+      } catch (e) {}
+    }
+  }
+
   // Register Nebula Modules
   Nebula.register(NebulaPolyfillModule);
   Nebula.register(NebulaGradientSliderModule);
@@ -1265,6 +1330,7 @@
   Nebula.register(NebulaMediaCoverArtModule);
   Nebula.register(NebulaMenuModule);
   Nebula.register(NebulaCtrlTabDualBackgroundModule);
+  Nebula.register(NebulaZenBonjourrModule);
 
   // Start the core
   Nebula.init();

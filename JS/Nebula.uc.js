@@ -1258,68 +1258,74 @@
 
 // ========== NebulaZenBonjourrModule ==========
   class NebulaZenBonjourrModule {
-    constructor() {
-      this.extension_id = "{4f391a9e-8717-4ba6-a5b1-488a34931fcb}";
-      this.pref_key = "zen.nebula.bonjourr-on-startup";
-      this.cached_url = null;
+  constructor() {
+    this.extension_id = "{4f391a9e-8717-4ba6-a5b1-488a34931fcb}";
+    this.pref_key = "zen.nebula.bonjourr-on-startup";
+    this.cached_url = null;
+    this.empty_states = ["about:blank", "about:home", "about:newtab"];
+  }
+
+  init() {
+    if (document.documentElement.getAttribute("windowtype") !== "navigator:browser") {
+      return; 
     }
 
-    init() {
-      // initialize preference
-      try {
-        let branch = Services.prefs.getDefaultBranch("zen.nebula.");
-        if (branch.getPrefType("bonjourr-on-startup") === 0) {
-          branch.setBoolPref("bonjourr-on-startup", true);
-        }
-      } catch (e) {}
+    try {
+      const branch = Services.prefs.getDefaultBranch("zen.nebula.");
+      if (branch.getPrefType("bonjourr-on-startup") === 0) {
+        branch.setBoolPref("bonjourr-on-startup", true);
+      }
+    } catch (e) {}
 
-      // startup check
+    this.bind_events();
+    Nebula.logger.log("✅ [ZenBonjourr] Module initialized.");
+  }
+
+  bind_events() {
+    setTimeout(() => this.check_and_navigate(), 500);
+
+    gBrowser.tabContainer.addEventListener("TabClose", () => {
       setTimeout(() => {
-        if (!window.gBrowser) return;
-        let url = gBrowser.selectedBrowser.currentURI.spec;
-        if (url === "about:blank" || url === "about:home" || url === "about:newtab") {
-          this.execute_navigation();
+        if (gBrowser.tabs.length === 1) {
+          this.check_and_navigate();
         }
-      }, 500);
+      }, 200);
+    });
+  }
 
-      // tab closure check
-      gBrowser.tabContainer.addEventListener("TabClose", () => {
-        if (!Services.prefs.getBoolPref(this.pref_key, true)) return;
-        setTimeout(() => {
-          if (gBrowser.tabs.length === 1) {
-            let url = gBrowser.selectedBrowser.currentURI.spec;
-            if (url === "about:blank" || url === "about:home") {
-              this.execute_navigation();
-            }
-          }
-        }, 200);
-      });
+  check_and_navigate() {
+    if (!Services.prefs.getBoolPref(this.pref_key, true)) return;
+    if (!window.gBrowser) return;
 
-      Nebula.logger.log("✅ [ZenBonjourr] Module initialized.");
-    }
-
-    get_url() {
-      if (this.cached_url) return this.cached_url;
-      try {
-        let policy = WebExtensionPolicy.getByID(this.extension_id);
-        if (policy) return this.cached_url = policy.getURL("index.html");
-      } catch (e) {}
-      return null;
-    }
-
-    execute_navigation() {
-      if (!Services.prefs.getBoolPref(this.pref_key, true)) return;
-      const target = this.get_url();
-      if (!target) return;
-
-      try {
-        let uri = Services.io.newURI(target);
-        gBrowser.selectedBrowser.loadURI(uri, {
-          triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal()
-        });
-      } catch (e) {}
+    const current_url = gBrowser.selectedBrowser.currentURI.spec;
+    if (this.empty_states.includes(current_url)) {
+      this.execute_navigation();
     }
   }
+
+  get_extension_url() {
+    if (this.cached_url) return this.cached_url;
+    try {
+      const policy = WebExtensionPolicy.getByID(this.extension_id);
+      if (policy) return this.cached_url = policy.getURL("index.html");
+    } catch (e) {}
+    return null;
+  }
+
+  execute_navigation() {
+    const target = this.get_extension_url();
+    if (!target) return;
+
+    try {
+      const uri = Services.io.newURI(target);
+      gBrowser.selectedBrowser.loadURI(uri, {
+        triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal()
+      });
+    } catch (e) {
+      Nebula.logger.error("[ZenBonjourr] Navigation failed:", e);
+    }
+  }
+}
 
   // Register Nebula Modules
   Nebula.register(NebulaPolyfillModule);

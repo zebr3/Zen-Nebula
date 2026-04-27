@@ -1270,6 +1270,10 @@
       return; 
     }
 
+if (window.opener || (window.toolbar && !window.toolbar.visible)) {
+      return;
+    }
+
     try {
       const branch = Services.prefs.getDefaultBranch("zen.nebula.");
       if (branch.getPrefType("bonjourr-on-startup") === 0) {
@@ -1321,9 +1325,25 @@
       gBrowser.selectedBrowser.loadURI(uri, {
         triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal()
       });
-    } catch (e) {
+
+this.apply_focus_kill_switch();
+
+   } catch (e) {
       Nebula.logger.error("[ZenBonjourr] Navigation failed:", e);
     }
+  }
+
+ apply_focus_kill_switch() {
+   const cleanup = () => {
+  if (!window.gURLBar) return;
+  gURLBar.removeAttribute("zen-newtab");
+  gURLBar.handleRevert();                
+  gBrowser.selectedBrowser?.focus();     
+};
+
+cleanup();             
+setTimeout(cleanup, 150); 
+setTimeout(cleanup, 450); 
   }
 }
 
